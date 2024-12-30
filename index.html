@@ -1,0 +1,155 @@
+<!-- index.html-->
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Detección de Movimiento y Ejercicios</title>
+  <link rel="stylesheet" href="styles.css">
+  
+  <!-- Incluir TensorFlow.js -->
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@3.21.0/dist/tf.min.js"></script>
+  
+  <!-- Incluir el modelo de detección de poses -->
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/pose-detection"></script>
+  
+  <!-- Incluir los scripts de soporte de backend de TensorFlow.js (si es necesario) -->
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-backend-webgl@3.21.0/dist/tf-backend-webgl.min.js"></script>
+
+  <!-- Añadir jsPDF desde un CDN -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+
+
+
+  <!-- Configuración de Firebase -->
+  <script type="module">
+    import { auth } from './firebaseConfig.js';
+    import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.17.1/firebase-auth.js";
+
+    onAuthStateChanged(auth, (user) => {
+        if (!user) {
+            alert("Debes iniciar sesión primero.");
+            window.location.href = "login.html";
+        }
+    });
+  </script>
+  
+</head>
+<body>
+
+  <div class="sidebar" id="sidebar">
+    <ul>
+      <li><a href="historial.html" target="_blank">Historial de Movimientos</a></li>
+      <li><a href="informes.html" target="_blank">Informes de Progreso</a></li>
+      <li><a href="reanalisisdatos.html" target="_blank">Reanálisis de Datos</a></li>
+      <li><a href="grafico.html" target="_blank">Gráfico de Densidad</a></li>
+      <li><a href="resumen.html" target="_blank">Resumen General</a></li>
+      <li><a href="notificaciones.html" target="_blank">Notificaciones</a></li>
+      <li><a href="reporte.html" target="_blank">Reporte de Progreso</a></li>
+    </ul>
+  </div>
+  
+  <!-- Botón para abrir/cerrar el menú -->
+  <button id="menuToggle" onclick="toggleSidebar()">☰</button>
+
+  <div class="main-content">
+  <h1>Detección de Movimiento y Ejercicios</h1>
+  
+  <div class="buttons">
+    <button data-gif="Circulosconlosbrazos">Círculos con los Brazos</button>
+    <button data-gif="Elevacionesdebrazosfrontales">Elevaciones de Brazos Frontales</button>
+    <button data-gif="Elevacionesdebrazoslaterales">Elevaciones de Brazos Laterales</button>
+    <button data-gif="Encogimientodehombros">Encogimiento de Hombros</button>
+    <button data-gif="Estiramientodelcuello">Estiramiento del Cuello</button>
+    <button data-gif="Flexionlateraldeltronco">Flexión Lateral del Tronco</button>
+  </div>
+
+ 
+  
+  <div class="container">
+    <div class="video-section">
+      <video id="video" width="640" height="480" autoplay muted></video>
+      <canvas id="canvas" width="640" height="480"></canvas>
+    </div>
+    <div class="gif-section">
+      <h2 id="exerciseTitle">Ejercicio Seleccionado</h2>
+      <img id="exerciseGif" src="" alt="Selecciona un ejercicio">
+    </div>
+  </div>
+</div>
+  
+  <div id="personContainers">
+    <div id="person1" class="person">
+      <h3 id="name1">Persona 1</h3> 
+      <p id="date1">Fecha y Hora: </p>
+      <p id="time1">Tiempo por Ejercicio: </p>
+      <p id="correctCount1">Correctos: 0</p>
+      <p id="incorrectCount1">Incorrectos: 0</p>
+      <p id="accuracy1">Precisión: 0%</p>
+      <button id="download1" class="downloadButton">Descargar PDF</button>
+    </div>
+    <div id="person2" class="person">
+      <h3 id="name2">Persona 2</h3> 
+      <p id="date2">Fecha y Hora: </p>
+      <p id="time2">Tiempo por Ejercicio: </p>
+      <p id="correctCount2">Correctos: 0</p>
+      <p id="incorrectCount2">Incorrectos: 0</p>
+      <p id="accuracy2">Precisión: 0%</p>
+      <button id="download2" class="downloadButton">Descargar PDF</button>
+    </div>
+    <div id="person3" class="person">
+      <h3 id="name3">Persona 3</h3>
+      <p id="date3">Fecha y Hora: </p>
+      <p id="time3">Tiempo por Ejercicio: </p>
+      <p id="correctCount3">Correctos: 0</p>
+      <p id="incorrectCount3">Incorrectos: 0</p>
+      <p id="accuracy3">Precisión: 0%</p>
+      <button id="download3" class="downloadButton">Descargar PDF</button>
+    </div>
+  </div>
+
+   <!-- Botón de Finalizar Ejercicio -->
+<div class="finish-button">
+  <button id="finishButton">Finalizar Ejercicio</button>
+</div>
+
+  <script>
+    // Recuperar los datos de los usuarios seleccionados
+const usersData = JSON.parse(localStorage.getItem("usersData"));
+
+if (usersData && usersData.length === 3) {
+  // Actualizar los nombres en la interfaz
+  usersData.forEach((user, index) => {
+    const personContainer = document.getElementById(`person${index + 1}`);
+    personContainer.querySelector("h3").textContent = `${user.nombre} ${user.apellidoPaterno}`;
+  });
+} else {
+  alert("No se encontraron datos de usuarios. Por favor, inicia sesión nuevamente.");
+  window.location.href = "login.html";
+}
+  </script>
+  
+
+  <script type="module" src="renderer.js"></script>
+
+
+  <!-- Script para manejar el menú desplegable -->
+  <script>
+    function toggleSidebar() {
+      const sidebar = document.getElementById('sidebar');
+      const mainContent = document.querySelector('.main-content');
+      const currentLeft = sidebar.style.left;
+
+      if (currentLeft === '' || currentLeft === '-250px') {
+        sidebar.style.left = '0';
+        mainContent.style.marginLeft = '250px';  // Acomoda el contenido cuando el menú se abre
+      } else {
+        sidebar.style.left = '-250px';
+        mainContent.style.marginLeft = '0';  // Vuelve al estado inicial cuando el menú se cierra
+      }
+    }
+  </script>
+  
+  
+</body>
+</html>

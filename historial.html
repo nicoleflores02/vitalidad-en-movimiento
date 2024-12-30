@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Historial de Ejercicios</title>
+  <link rel="stylesheet" href="styles.css">
+
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-firestore.js"></script>
+
+  <!-- Configuración de Firebase -->
+  <script src="firebaseConfig.js" type="module"></script>
+</head>
+<body>
+  <header>
+    <h1>Historial de Ejercicios</h1>
+    <nav>
+      <a href="perfil.html">Volver al Perfil</a>
+    </nav>
+  </header>
+
+  <section id="perfil">
+    <div id="usuario-info">
+      <h2>Bienvenido, <span id="nombre-usuario">[Nombre del Usuario]</span></h2>
+      <p>Historial de Ejercicios</p>
+    </div>
+    
+    <div id="filtros">
+      <label for="intervalo">Ver progreso por:</label>
+      <select id="intervalo" onchange="cargarHistorial()">
+        <option value="semanal">Semana</option>
+        <option value="mensual">Mes</option>
+      </select>
+    </div>
+
+    <div id="estadisticas">
+      <h3>Estadísticas de Ejercicios</h3>
+      <table id="estadisticas-table">
+        <thead>
+          <tr>
+            <th>Fecha</th>
+            <th>Hora</th>
+            <th>Tiempo Total</th>
+            <th>Postura Correcta (%)</th>
+            <th>Movimientos Correctos</th>
+            <th>Movimientos Incorrectos</th>
+            <th>Precisión (%)</th>
+          </tr>
+        </thead>
+        <tbody>
+          <!-- Se llenará dinámicamente con JS -->
+        </tbody>
+      </table>
+    </div>
+
+    <div id="grafico">
+      <h3>Progreso Cronológico</h3>
+      <canvas id="graficoProgreso" width="400" height="200"></canvas>
+    </div>
+  </section>
+
+  <!-- Chart.js para el gráfico -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="historial.js" type="module"></script> <!-- Archivo JS -->
+</body>
+</html>

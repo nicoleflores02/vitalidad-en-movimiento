@@ -1,0 +1,21 @@
+{
+  "name": "electron-movement-detection",
+  "version": "1.0.0",
+  "description": "Aplicación Electron para detectar movimientos usando la cámara",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "electron": "^32.1.2"
+  },
+  "dependencies": {
+    "@tensorflow-models/pose-detection": "^2.1.3",
+    "@tensorflow/tfjs": "^4.21.0",
+    "firebase": "^11.0.1"
+  }
+}

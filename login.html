@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login y Registro - Detección de Movimiento y Ejercicios</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <h1>Iniciar Sesión o Registrarse</h1>
+  
+  <!-- Contenedor principal -->
+  <div id="loginContainer">
+    <!-- Formulario de inicio de sesión -->
+    <div id="loginFormContainer">
+      <h2>Iniciar Sesión</h2>
+      <br><br>
+      <div>
+        <input type="text" id="searchInput" placeholder="Buscar por nombre o cédula" />
+        <button id="searchButton">Buscar</button>
+        <select id="userSelect" multiple>
+          <option value="" disabled>Seleccionar...</option>
+        </select>
+      </div>
+      <div>
+        <h3>Usuarios seleccionados:</h3>
+        <ul id="selectedUsersList"></ul>
+      </div>
+      <button id="loadUserButton">Iniciar sesión</button>
+      <br><br>
+      <p>¿No tienes cuenta? <a href="javascript:void(0)" onclick="showRegisterForm()">Regístrate</a></p>
+    </div>
+
+    <!-- Formulario de registro -->
+    <div id="registerFormContainer" style="display: none;">
+      <h2>Registrarse</h2>
+      <form id="registerForm">
+        <label for="nombre">Primer Nombre:</label>
+        <input type="text" id="nombre" required><br><br>
+        
+        <label for="segundoNombre">Segundo Nombre:</label>
+        <input type="text" id="segundoNombre" required><br><br>
+        
+        <label for="apellidoPaterno">Primer Apellido:</label>
+        <input type="text" id="apellidoPaterno" required><br><br>
+        
+        <label for="apellidoMaterno">Segundo Apellido:</label>
+        <input type="text" id="apellidoMaterno" required><br><br>
+        
+        <label for="cedulaRegister">Cédula:</label>
+        <input type="text" id="cedulaRegister" required><br><br>
+
+        <button type="submit">Registrarse</button>
+      </form>
+      <p>¿Ya tienes cuenta? <a href="javascript:void(0)" onclick="showLoginForm()">Inicia sesión</a></p>
+    </div>
+  </div>
+
+  <script>
+    // Función para mostrar el formulario de registro
+    function showRegisterForm() {
+      document.getElementById("loginFormContainer").style.display = "none";
+      document.getElementById("registerFormContainer").style.display = "block";
+    }
+
+    // Función para mostrar el formulario de inicio de sesión
+    function showLoginForm() {
+      document.getElementById("registerFormContainer").style.display = "none";
+      document.getElementById("loginFormContainer").style.display = "block";
+    }
+
+    // Guardar los datos seleccionados para el menú
+    document.getElementById("loadUserButton").addEventListener("click", () => {
+      const selectedUsers = Array.from(document.getElementById("userSelect").selectedOptions).map(option => option.value);
+      localStorage.setItem("selectedUsers", JSON.stringify(selectedUsers));
+      alert("Usuarios guardados: " + selectedUsers.join(", "));
+    });
+  </script>
+
+  
+
+  <!-- Importación de Firebase y scripts -->
+  <script type="module" src="firebaseConfig.js"></script>
+  <script type="module" src="login.js"></script>
+</body>
+</html>
