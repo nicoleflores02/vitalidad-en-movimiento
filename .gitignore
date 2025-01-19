@@ -1,0 +1,19 @@
+# Ignorar node_modules
+node_modules/
+
+# Ignorar dependencias empaquetadas
+*.zip
+
+# Ignorar archivos de sistema
+.DS_Store
+Thumbs.db
+
+# Ignorar archivos de log y temporales
+*.log
+*.tmp
+
+# Ignorar configuraciones del editor
+.vscode/
+.idea/
+*.swp
+
