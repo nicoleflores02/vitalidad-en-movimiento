@@ -1,7 +1,8 @@
 // firebase.Config.js
-import { initializeApp } from "https://www.gstatic.com/firebasejs/9.17.1/firebase-app.js";
-import { getAuth } from "https://www.gstatic.com/firebasejs/9.17.1/firebase-auth.js";
-import { getFirestore } from "https://www.gstatic.com/firebasejs/9.17.1/firebase-firestore.js";
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-app.js";
+import { getAuth } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-auth.js";
+import { getFirestore } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-firestore.js";
+import { getAnalytics } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-analytics.js";
 
 // Tu configuración de Firebase
 const firebaseConfig = {
@@ -18,3 +19,4 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 export const db = getFirestore(app);
+export const analytics = getAnalytics(app);

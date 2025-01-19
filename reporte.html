@@ -4,14 +4,19 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Reporte de Progreso</title>
-  <link rel="stylesheet" href="styles.css">
+  <style>
+    .progreso-item {
+      margin-bottom: 20px;
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+    }
+  </style>
 </head>
 <body>
-  <div class="main-content">
-    <h1>Reporte de Progreso</h1>
-    <div class="content">
-      <p>Se mostrarán los informes generados con base en las sesiones previas, con gráficos y estadísticas.</p>
-    </div>
-  </div>
+  <h1>Reporte de Progreso</h1>
+  <div id="progreso"></div>
+
+  <script type="module" src="reportes.js"></script>
 </body>
 </html>

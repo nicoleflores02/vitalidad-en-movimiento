@@ -3,15 +3,123 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Gráfico de Densidad</title>
-  <link rel="stylesheet" href="styles.css">
+  <title>Guías de Ejercicios</title>
+  <style>
+    /* Estilos generales */
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      background: linear-gradient(135deg, #a0e4e9, #78c3d4);
+      color: #044e54;
+    }
+
+    header {
+      background: linear-gradient(135deg, #60c7d0, #3daab9); 
+      color: #fff;
+      cursor: pointer;
+      padding: 15px;
+      text-align: center;
+      box-shadow: 0 3px 6px rgba(0, 0, 0, 0.1);
+      transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+    }
+
+    main {
+      padding: 20px;
+    }
+
+    footer {
+      text-align: center;
+      padding: 10px;
+      background: linear-gradient(135deg, #60c7d0, #3daab9); 
+      color: #333;
+    }
+
+    /* Sección de videos */
+    .video-section {
+      margin-top: 40px;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 20px;
+      justify-items: center;
+    }
+
+    .video-container {
+      background-color: #e9e9e9; /* Fondo claro */
+      border-radius: 8px;
+      overflow: hidden;
+      border: 1px solid #ccc; /* Borde del video */
+      transition: transform 0.3s ease, background-color 0.3s ease;
+    }
+
+    .video-container:hover {
+      transform: scale(1.05);
+      background-color: #ddd; /* Cambio de fondo al pasar el cursor */
+    }
+
+    .video-container video {
+      width: 100%;
+      height: 200px;
+      object-fit: cover;
+    }
+
+    .video-container p {
+      text-align: center;
+      padding: 10px;
+      background: linear-gradient(135deg, #a0e4e9, #78c3d4);  
+      color: #333;
+      font-weight: bold;
+    }
+</style>
+
 </head>
 <body>
-  <div class="main-content">
-    <h1>Gráfico de Densidad</h1>
-    <div class="content">
-      <p>Se mostrarán los informes generados con base en las sesiones previas, con gráficos y estadísticas.</p>
-    </div>
-  </div>
+  <header>
+    <h1>Guías de Ejercicios</h1>
+  </header>
+  
+  <main>
+    <!-- Sección de videos -->
+    <section class="video-section">
+      <div class="video-container">
+        <video controls>
+          <source src="assets/videos/Círculos con los Brazos (Tutorial Paso a Paso).mp4" type="video/mp4">
+          Tu navegador no soporta el formato de video.
+        </video>
+        <p>Ejercicio 1: Círculos con los Brazos</p>
+      </div>
+      <div class="video-container">
+        <video controls>
+          <source src="assets/videos/Elevaciones Frontales (Tutorial Paso a Paso).mp4" type="video/mp4">
+          Tu navegador no soporta el formato de video.
+        </video>
+        <p>Ejercicio 2: Elevaciones de brazos Frontales</p>
+      </div>
+      <div class="video-container">
+        <video controls>
+          <source src="assets/videos/Elevacionesdebrazoslaterales.mp4" type="video/mp4">
+          Tu navegador no soporta el formato de video.
+        </video>
+        <p>Ejercicio 3: Elevacionesdebrazoslaterales</p>
+      </div><div class="video-container">
+        <video controls>
+          <source src="assets/videos/Encogimiento de Hombros (Tutorial Paso a Paso).mp4" type="video/mp4">
+          Tu navegador no soporta el formato de video.
+        </video>
+        <p>Ejercicio 4: Encogimiento de Hombros</p>
+      </div><div class="video-container">
+        <video controls>
+          <source src="assets/videos/Estiramientodelcuello.mp4" type="video/mp4">
+          Tu navegador no soporta el formato de video.
+        </video>
+        <p>Ejercicio 5: Estiramientodelcuello</p>
+      </div>
+      
+    </section>
+  </main>
+
+  <footer>
+    <p>&copy; 2024 Tu aplicación de ejercicios</p>
+  </footer>
 </body>
 </html>

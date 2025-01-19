@@ -4,65 +4,76 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Historial de Ejercicios</title>
+  <!-- Puedes agregar tus hojas de estilo aquí -->
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+    }
+    #submenu-usuarios {
+      list-style-type: none;
+      padding: 0;
+    }
+    #submenu-usuarios li {
+      cursor: pointer;
+      padding: 5px;
+      border: 1px solid #ccc;
+      margin-bottom: 5px;
+      background-color: #f4f4f4;
+    }
+    #submenu-usuarios li:hover {
+      background-color: #ddd;
+    }
+    #historialList {
+      list-style-type: none;
+      padding: 0;
+    }
+    #historialList li {
+      cursor: pointer;
+      padding: 10px;
+      border: 1px solid #ccc;
+      margin-bottom: 5px;
+      background-color: #e9e9e9;
+    }
+    #historialList li:hover {
+      background-color: #d1d1d1;
+    }
+    #detallesHistorial {
+      margin-top: 20px;
+    }
+  </style>
   <link rel="stylesheet" href="styles.css">
-
-  <!-- Firebase SDK -->
-  <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-firestore.js"></script>
-
-  <!-- Configuración de Firebase -->
-  <script src="firebaseConfig.js" type="module"></script>
 </head>
 <body>
   <header>
     <h1>Historial de Ejercicios</h1>
-    <nav>
-      <a href="perfil.html">Volver al Perfil</a>
-    </nav>
   </header>
+  
+  <!-- Submenú para mostrar los usuarios -->
+  <h2>Seleccionar Usuario</h2>
+  <ul id="submenu-usuarios">
+    <!-- Los usuarios se agregarán dinámicamente aquí -->
+  </ul>
 
-  <section id="perfil">
-    <div id="usuario-info">
-      <h2>Bienvenido, <span id="nombre-usuario">[Nombre del Usuario]</span></h2>
-      <p>Historial de Ejercicios</p>
-    </div>
-    
-    <div id="filtros">
-      <label for="intervalo">Ver progreso por:</label>
-      <select id="intervalo" onchange="cargarHistorial()">
-        <option value="semanal">Semana</option>
-        <option value="mensual">Mes</option>
-      </select>
-    </div>
 
-    <div id="estadisticas">
-      <h3>Estadísticas de Ejercicios</h3>
-      <table id="estadisticas-table">
-        <thead>
-          <tr>
-            <th>Fecha</th>
-            <th>Hora</th>
-            <th>Tiempo Total</th>
-            <th>Postura Correcta (%)</th>
-            <th>Movimientos Correctos</th>
-            <th>Movimientos Incorrectos</th>
-            <th>Precisión (%)</th>
-          </tr>
-        </thead>
-        <tbody>
-          <!-- Se llenará dinámicamente con JS -->
-        </tbody>
-      </table>
-    </div>
+  <!-- Lista de historiales del usuario seleccionado -->
+  <h2>Historial del Usuario</h2>
+  <ul id="historialList">
+    <!-- Los historiales del usuario seleccionado se agregarán aquí -->
+  </ul>
 
-    <div id="grafico">
-      <h3>Progreso Cronológico</h3>
-      <canvas id="graficoProgreso" width="400" height="200"></canvas>
-    </div>
-  </section>
+  <!-- Detalles del historial seleccionado -->
+  <div id="detallesHistorial">
+    <!-- Los detalles del historial se mostrarán aquí -->
+  </div>
+  
+  <footer>
+    <p>&copy; 2024 Vitalidad en movimiento</p>
+  </footer>
 
-  <!-- Chart.js para el gráfico -->
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script src="historial.js" type="module"></script> <!-- Archivo JS -->
+  <!-- Vincula tu archivo JavaScript -->
+  <script src="https://www.gstatic.com/firebasejs/11.1.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/11.1.0/firebase-firestore.js"></script>
+  <script type="module" src="historial.js"></script>
 </body>
 </html>

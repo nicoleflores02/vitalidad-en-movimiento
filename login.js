@@ -1,9 +1,22 @@
-import { auth, db } from './firebaseConfig.js';
-import { createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/9.17.1/firebase-auth.js";
-import { doc, setDoc, collection,  addDoc, onSnapshot, query, where, getDocs } from "https://www.gstatic.com/firebasejs/9.17.1/firebase-firestore.js";
-
+import { auth, db, analytics } from './firebaseConfig.js';
+import { createUserWithEmailAndPassword ,onAuthStateChanged} from "https://www.gstatic.com/firebasejs/11.1.0/firebase-auth.js";
+import { doc, setDoc, collection, addDoc, onSnapshot, query, where, getDocs } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-firestore.js";
 // Estado para almacenar usuarios seleccionados
 const selectedUsers = [];
+// Verificar y actualizar el token del usuario autenticado
+onAuthStateChanged(auth, (user) => {
+  if (user) {
+    user.getIdToken(true) // Actualiza el token
+      .then((token) => {
+        console.log("Token actualizado:", token);
+      })
+      .catch((error) => {
+        console.error("Error al actualizar el token:", error);
+      });
+  } else {
+    console.log("No hay usuario autenticado.");
+  }
+});
 
 // Validación avanzada de cédula ecuatoriana
 function validarCedulaEcuatoriana(cedula) {
@@ -201,17 +214,16 @@ document.getElementById("registerForm").addEventListener("submit", async functio
     const user = userCredential.user;
 
     console.log("Usuario registrado:", user.uid); // Para depuración
-
-    // Crear documento del usuario en Firestore
+  // Crear documento del usuario en Firestore
     const userRef = doc(db, "users", user.uid);
-
-    await setDoc(doc(db, "users", user.uid), {
+    await setDoc(userRef, {
       nombre,
       segundoNombre,
       apellidoPaterno,
       apellidoMaterno,
-      cedula: cedulaRegister,
-      createdAt: new Date().toISOString()
+      cedula: String(cedulaRegister).trim(),  // Asegúrate de que no tenga espacios
+      createdAt: new Date().toISOString(),
+      uid: user.uid  // Guardamos el UID en el documento
     });
 
     console.log("Documento del usuario creado en Firestore."); // Depuración

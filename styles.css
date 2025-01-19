@@ -48,16 +48,46 @@ input:focus {
   box-shadow: 0 0 6px rgba(109, 210, 223, 0.5);
 }
 
+.exercise-buttons-container {
+  display: flex; /* Activa un diseño flexible */
+  justify-content: center; /* Centra el contenido horizontalmente */
+  align-items: center; /* Centra verticalmente */
+  flex-wrap: wrap; /* Permite que los botones se ajusten a nuevas filas */
+  gap: 10px; /* Espaciado entre los botones */
+  padding: 20px; /* Espaciado interno del contenedor */
+  max-width: 100%; /* Asegura que no exceda el ancho disponible */
+  box-sizing: border-box; /* Incluye el padding dentro del ancho del contenedor */
+}
+
+.buttons button {
+  flex: 1 1 auto; /* Los botones se ajustan al espacio disponible */
+  min-width: 150px; /* Tamaño mínimo para los botones */
+  max-width: 200px; /* Tamaño máximo para los botones */
+  padding: 10px; /* Espaciado interno del botón */
+  font-size: 14px; /* Tamaño del texto */
+  cursor: pointer; /* Cambia el cursor a un puntero */
+  border: 1px solid #ccc; /* Borde del botón */
+  border-radius: 5px; /* Bordes redondeados */
+}
+
+.buttons {
+  display: flex; /* Diseño flexible para los botones */
+  flex-wrap: wrap; /* Los botones se acomodan en varias filas si es necesario */
+  gap: 10px; /* Espaciado entre los botones */
+  justify-content: center; /* Centra los botones dentro del contenedor */
+}
+
+
 button {
-  padding: 12px 25px;
-  font-size: 16px;
+  padding: 8px 12px;
+  font-size: 14px; 
   cursor: pointer;
-  border: none;
-  border-radius: 8px;
+  border-radius: 4px;
   background: linear-gradient(135deg, #60c7d0, #3daab9);
   color: #fff;
+  border: none;
   box-shadow: 0 3px 6px rgba(0, 0, 0, 0.1);
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
 }
 
 button:hover {
@@ -65,8 +95,11 @@ button:hover {
   box-shadow: 0 6px 10px rgba(0, 0, 0, 0.15);
 }
 
+button:focus,
 button:active {
-  transform: translateY(1px);
+  background: linear-gradient(135deg, #3d68b9, #60c7d0);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  outline: none; /* Opcional, para eliminar el borde azul */
 }
 
 a {
@@ -271,7 +304,7 @@ p {
   cursor: pointer;
   border: none;
   border-radius: 8px;
-  background: linear-gradient(135deg, #ff7b54, #ff3d3d);
+  background: linear-gradient(135deg, #5cbbffd8, #3dd5ff);
   color: #fff;
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
   transition: transform 0.2s ease, box-shadow 0.2s ease;
@@ -308,3 +341,71 @@ p {
     margin-bottom: 20px;
   }
 }
+#historial {
+  margin: 20px auto;
+  padding: 20px;
+  max-width: 800px;
+  background-color: #fff;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.historial-item {
+  padding: 10px;
+  border-bottom: 1px solid #ddd;
+}
+
+.historial-item:last-child {
+  border-bottom: none;
+}
+
+.historial-item p {
+  margin: 5px 0;
+  font-size: 1rem;
+}
+
+.historial-item p strong {
+  color: #333;
+}
+
+#submenu {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+#submenu button {
+  padding: 10px;
+  border: 1px solid #ccc;
+  background-color: #f9f9f9;
+  cursor: pointer;
+}
+
+#submenu button:hover {
+  background-color: #eaeaea;
+}
+
+.historial-item {
+  border: 1px solid #ddd;
+  padding: 10px;
+  margin-bottom: 10px;
+}
+
+#historialList {
+  list-style: none;
+  padding: 0;
+}
+
+#historialList li {
+  border: 1px solid #ddd;
+  margin: 10px 0;
+  padding: 10px;
+  border-radius: 5px;
+  background-color: #f9f9f9;
+}
+
+li a[href="historial.html"] {
+  display: inline-block; /* Asegura que los márgenes funcionen correctamente */
+  margin-top: 45px; /* Ajusta el valor según el espacio que desees */
+}
+

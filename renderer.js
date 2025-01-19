@@ -1,4 +1,6 @@
 // renderer.js
+import { db  } from './firebaseConfig.js';
+import {  collection, addDoc, onSnapshot   } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-firestore.js";  // Importar las funciones necesarias
 
 // Función para descargar el PDF
 const { jsPDF } = window.jspdf;
@@ -56,8 +58,6 @@ document.querySelectorAll('.downloadButton').forEach((button, index) => {
 });
 
 
-
-
 // Obtener referencias a los elementos del DOM
 const video = document.getElementById('video');
 const canvas = document.getElementById('canvas');
@@ -94,6 +94,12 @@ const dateElems = [
 ]; 
 
 
+
+// Inicialización de las variables
+
+let selectedButton = null;
+
+let isExerciseFinished = false; // Variable para controlar si el ejercicio se ha finalizado
 
 
 
@@ -132,16 +138,75 @@ async function setupCamera() {
 }
 
 // Inicialización de las variables
-let selectedButton = null;
-let correctCount = [0, 0, 0]; // Almacena conteos de movimientos correctos para cada persona
-let incorrectCount = [0, 0, 0]; // Almacena conteos de movimientos incorrectos
-let lastDetectedCorrect = [false, false, false];
+let lastDetectedCorrect = [false, false, false];  // Estado de cada persona, true si el último movimiento fue correcto
 let lastDetectedIncorrect = [false, false, false]; // Estado de cada persona, true si el último movimiento fue incorrecto
 
-let startTime = [null, null, null]; // Para capturar el inicio de cada ejercicio
-let totalTime = [0, 0, 0]; // Tiempo total por persona
+let correctCount = [0, 0, 0];
+let incorrectCount = [0, 0, 0];
+let totalTime = [0, 0, 0];
+let startTime = [null, null, null];
 
-let isExerciseFinished = false; // Variable para controlar si el ejercicio se ha finalizado
+let alertInterval = null; // Para controlar el intervalo de la alerta
+let alertPlayed = false; // Para asegurarnos de que la alerta suene solo una vez cuando se selecciona un ejercicio
+
+function formatTime(seconds) {
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  const remainingSeconds = Math.floor(seconds % 60);
+
+  if (hours > 0) {
+      return `${hours}h ${minutes}m ${remainingSeconds}s`;
+  } else if (minutes > 0) {
+      return `${minutes}m ${remainingSeconds}s`;
+  } else {
+      return `${remainingSeconds}s`;
+  }
+}
+
+
+// Función para reproducir alertas de audio
+function playAlertSound() {
+  if (alertInterval || isExerciseFinished) return; // Evitar que se reproduzca la alerta si ya está sonando
+
+  const audio = new Audio('assets/audio/alert-sound1.mp3'); // Ruta del archivo de audio
+  audio.play();
+
+  // Pausar la alerta para que no suene repetidamente
+  alertInterval = setInterval(() => {
+    audio.play();
+  }, 2000); // Intervalo de 2 segundos entre alertas (ajustable)
+
+  // Detener la alerta después de cierto tiempo
+  setTimeout(() => {
+    clearInterval(alertInterval); // Detener el intervalo
+    alertInterval = null; // Liberar el intervalo
+    alertPlayed = false; // Permitir que la alerta suene nuevamente cuando se seleccione otro ejercicio
+  }, 10000); // Detener la alerta después de 10 segundos (ajustable)
+} 
+
+function checkStandingPosture(keypoints) {
+  // Buscar las posiciones de las caderas y rodillas
+  const leftHip = keypoints.find(k => k.name === 'left_hip');
+  const rightHip = keypoints.find(k => k.name === 'right_hip');
+  const leftKnee = keypoints.find(k => k.name === 'left_knee');
+  const rightKnee = keypoints.find(k => k.name === 'right_knee');
+
+  if (leftHip && rightHip && leftKnee && rightKnee) {
+    // Verificar si las caderas están alineadas (pequeña diferencia entre alturas)
+    const deltaY = Math.abs(leftHip.y - rightHip.y);
+    const threshold = 15; // Umbral ajustado para mayor precisión
+
+    // Verificar si las caderas están por encima de las rodillas
+    const isHipsAboveKnees = leftHip.y < leftKnee.y && rightHip.y < rightKnee.y;
+
+    // Si las caderas están alineadas y por encima de las rodillas, la persona está de pie
+    if (deltaY < threshold && isHipsAboveKnees) {
+      return true;
+    }
+  }
+
+  return false; // La persona no está de pie
+}
 
 // Función principal para detectar movimiento y poses de múltiples personas
 async function detectMovementAndPose() {
@@ -154,13 +219,31 @@ async function detectMovementAndPose() {
   const currentDate = new Date();
   const formattedDate = `Fecha y Hora: ${currentDate.toLocaleString()}`;
   dateElems.forEach(dateElem => dateElem.textContent = formattedDate);
-  
+
   // Detectar poses de múltiples personas
   const poses = await detector.estimatePoses(video);
-  
+
   poses.slice(0, 3).forEach((pose, index) => { // Limitamos a las primeras tres personas detectadas
     drawKeypoints(pose.keypoints, index);
     drawSkeleton(pose.keypoints);
+
+    const isStanding = checkStandingPosture(pose.keypoints);
+    
+
+   // Nueva condición: Suena solo si hay un botón seleccionado y la postura es incorrecta
+   if (selectedButton && !isExerciseFinished && !isStanding) {
+    if (!alertPlayed) {
+      playAlertSound(); // Reproducir alerta si no está sonando
+      alertPlayed = true; // Evitar que la alerta se reproduzca repetidamente
+    }
+  } else {
+    // Si la postura es correcta o no hay ejercicio seleccionado, detener la alerta
+    if (alertInterval) {
+      clearInterval(alertInterval); // Detener cualquier intervalo activo
+      alertInterval = null; // Liberar el intervalo
+    }
+    alertPlayed = false; // Permitir reproducir la alerta nuevamente si cambian las condiciones
+  }
 
 
     // Verificar ejercicio para cada persona
@@ -168,11 +251,12 @@ async function detectMovementAndPose() {
       if (!startTime[index] && !isExerciseFinished) {
         startTime[index] = performance.now(); // Comienza el tiempo si no está iniciado
       }
+
       const gifName = selectedButton.getAttribute('data-gif');
       const isCorrect = recognizeExercise(pose.keypoints, gifName);
 
       // Si el movimiento es correcto y no se había detectado anteriormente como correcto
-      if (isCorrect) {
+      if (isCorrect ) {
         if (!lastDetectedCorrect[index]) {
           correctCount[index]++;  // Incrementar el contador de correctos
           lastDetectedCorrect[index] = true;  // Marcar que el movimiento fue correcto
@@ -205,16 +289,20 @@ async function detectMovementAndPose() {
       }
 
       if (startTime[index] && !isExerciseFinished) {
-        totalTime[index] = (performance.now() - startTime[index]) / 1000;
-        // Actualizar el tiempo en el contenedor de la persona
+        totalTime[index] = (performance.now() - startTime[index]) / 1000; // Calcula el tiempo en segundos
+        
+        // Usa la nueva función para formatear el tiempo
+        const formattedTime = formatTime(totalTime[index]);
+    
+        // Actualiza el tiempo en el contenedor de la persona
         const personContainer = document.getElementById(`person${index + 1}`);
         if (personContainer) {
-          const timeElem = personContainer.querySelector(`#time${index + 1}`);
-          if (timeElem) {
-            timeElem.textContent = `Tiempo por Ejercicio: ${totalTime[index].toFixed(2)} s`;
-          }
+            const timeElem = personContainer.querySelector(`#time${index + 1}`);
+            if (timeElem) {
+                timeElem.textContent = `Tiempo por Ejercicio: ${formattedTime}`;
+            }
         }
-      }
+    }
     }
 
     
@@ -235,6 +323,7 @@ async function detectMovementAndPose() {
   requestAnimationFrame(detectMovementAndPose);
 }
 
+
 // Obtener referencia al botón "Finalizar Ejercicio"
 const finishButton = document.getElementById('finishButton');
 
@@ -242,6 +331,14 @@ const finishButton = document.getElementById('finishButton');
 finishButton.addEventListener('click', () => {
   isExerciseFinished = true; // Congelar el tiempo
   alert("Ejercicio Finalizado. El tiempo se ha congelado.");
+
+  // Detener la alerta si está activa
+  if (alertInterval) {
+    clearInterval(alertInterval); // Detener el intervalo
+    alertInterval = null; // Liberar el intervalo
+  }
+  alertPlayed = false; // Permitir que la alerta vuelva a sonar solo al seleccionar un nuevo ejercicio
+
   finalizarEjercicioParaUsuarios();
 });
 
@@ -298,6 +395,51 @@ function finalizarEjercicioParaUsuarios() {
   }
 }
 
+// Función para obtener datos del historial en tiempo real
+export function obtenerHistorialEnTiempoReal(usuarioID, callback) {
+  try {
+    // Referencia a la colección 'historial' del usuario
+    const historialRef = collection(db, 'users', usuarioID, 'historial');
+    
+    // Escuchar cambios en tiempo real en los documentos de historial
+    const unsubscribe = onSnapshot(historialRef, (querySnapshot) => {
+      const historialData = [];
+      
+      querySnapshot.forEach((doc) => {
+        const data = doc.data();
+
+        // Asegúrate de que los datos que esperas estén presentes
+        const nombreEjercicio = data.nombreEjercicio || "No especificado";
+        const fecha = data.fecha ? data.fecha.toDate().toLocaleString() : "Fecha no disponible";
+        const duracionEnSegundos = data.duracion || 0;
+        const duracionFormateada = formatTime(duracionEnSegundos);
+        const movimientosCorrectos = data.movimientosCorrectos || 0;
+        const movimientosIncorrectos = data.movimientosIncorrectos || 0;
+        const precision = data.precision || 0;
+
+        historialData.push({
+          id: doc.id,  // Guarda el ID del documento para usarlo al hacer clic
+          nombreEjercicio,
+          fecha,
+          duracion: duracionFormateada,
+          movimientosCorrectos,
+          movimientosIncorrectos,
+          precision
+        });
+      });
+      
+      // Llamar al callback con los datos actualizados
+      callback(historialData);
+    });
+    
+    // Devolver la función unsubscribe para que puedas dejar de escuchar los cambios cuando lo necesites
+    return unsubscribe;
+  } catch (error) {
+    console.error("Error al recuperar el historial del usuario:", usuarioID, error);
+  }
+}
+
+
 // Función para obtener los usuarios desde la base de datos (o localStorage)
 function getUsersFromDatabase() {
   const usersData = JSON.parse(localStorage.getItem("usersData"));
@@ -317,31 +459,30 @@ function getUsersFromDatabase() {
   }
 }
 
-
-
-// Función para dibujar keypoints para múltiples personas con colores distintos
+// Función para dibujar keypoints y nombres para múltiples personas con colores distintos
 function drawKeypoints(keypoints, index) {
   const colors = ['#00FF00', '#0000FF', '#FF00FF']; // Colores distintos para cada persona
+
+  // Dibuja los puntos clave (keypoints)
   keypoints.forEach(keypoint => {
     if (keypoint.score > 0.5) {
       ctx.beginPath();
-      ctx.arc(keypoint.x, keypoint.y, 5, 0, 2 * Math.PI);
-      ctx.fillStyle = colors[index];
+      ctx.arc(keypoint.x, keypoint.y, 5, 0, 2 * Math.PI); // Dibuja el círculo en el punto clave
+      ctx.fillStyle = colors[index]; // Asigna el color según el índice
       ctx.fill();
     }
   });
-   // Dibuja el nombre de la persona en el mismo color
-   ctx.fillStyle = colors[index]; // Asigna el color para el texto (el mismo que el de los keypoints)
-   ctx.font = '16px Arial'; // Establece el tamaño y tipo de fuente
-   
-   // Dibuja el nombre cerca del primer keypoint
-   ctx.fillText(users[index], keypoints[0].x + 10, keypoints[0].y);
- }
- 
- // Llamar a esta función después de que se hayan recuperado los usuarios de la base de datos
- getUsersFromDatabase();
- 
 
+  // Dibuja el nombre de la persona en el mismo color
+  ctx.fillStyle = colors[index]; // Asigna el color para el texto (el mismo que el de los keypoints)
+  ctx.font = '16px Arial'; // Establece el tamaño y tipo de fuente
+  
+  // Dibuja el nombre cerca del primer keypoint
+  ctx.fillText(users[index], keypoints[0].x + 10, keypoints[0].y);
+}
+
+// Llamar a esta función después de que se hayan recuperado los usuarios de la base de datos
+getUsersFromDatabase();
 
 
 // Función para dibujar el esqueleto en el canvas
@@ -374,14 +515,26 @@ buttons.forEach(button => {
     button.classList.add('active');
     selectedButton = button;
 
+    // Reiniciar variables de la alarma y el estado del ejercicio
+    alertPlayed = false; // Permitir que la alarma vuelva a sonar
+    isExerciseFinished = false; // Marcar el ejercicio como no finalizado
+
     // Actualizar contadores de ejercicios en la interfaz
     correctCount = [0, 0, 0];
     incorrectCount = [0, 0, 0];
+    
     startTime = [null, null, null];
     correctCountElems.forEach((elem, i) => elem.textContent = `Persona ${i + 1} - Correctos: 0`);
     incorrectCountElems.forEach((elem, i) => elem.textContent = `Persona ${i + 1} - Incorrectos: 0`);
     timeElems.forEach((elem, i) => elem.textContent = `Tiempo por Ejercicio: 0.00 s`);
     accuracyElems.forEach((elem, i) => elem.textContent = `Precisión: 0.00%`);
+
+     // Reproducir la alarma solo cuando se selecciona un ejercicio (si aún no ha sonado)
+     if (!alertPlayed) {
+      playAlertSound(); // Llama a la función que reproduce la alerta
+      alertPlayed = true; // Marcar que la alerta ha sonado
+    }
+    
   });
 });
 
@@ -439,206 +592,242 @@ function recognizeExercise(keypoints, gifName) {
   }
 }
 
-/// Variables para almacenar el estado anterior de los ejercicios
+
+// Variables para almacenar el estado anterior de los ejercicios
 // Declaración global de `exerciseState` que contiene el estado de cada ejercicio detectado
 let exerciseState = {
-  Circulosconlosbrazos: false,
-  Elevacionesdebrazosfrontales: false,
-  Elevacionesdebrazoslaterales: false,
-  Encogimientodehombros: false,
-  Estiramientodelcuello: false,
-  Flexionlateraldeltronco: false
+  Estiramientodelcuello: false, // Estado del ejercicio de estiramiento del cuello
+  Flexionlateraldeltronco: false, // Estado del ejercicio de flexión lateral del tronco
+  Circulosconlosbrazos: false, // Estado del ejercicio de círculos con los brazos
+  Elevacionesdebrazosfrontales: false, // Estado del ejercicio de elevaciones de brazos frontales
+  Elevacionesdebrazoslaterales: false // Estado del ejercicio de elevaciones de brazos laterales
 };
 
-// Función para detectar "Encogimiento de hombros"
-function detectEncogimientodehombros(keypoints) {
-  // Obtenemos las posiciones de los hombros
-  const leftShoulder = keypoints.find(k => k.name === 'left_shoulder');
-  const rightShoulder = keypoints.find(k => k.name === 'right_shoulder');
-  
-  if (leftShoulder.score > 0.5 && rightShoulder.score > 0.5) {
-    // Calculamos la altura de los hombros
-    const shoulderY = (leftShoulder.y + rightShoulder.y) / 2;
-    
-    // Suponiendo que cuando los hombros se encogen, la altura disminuye
-    // Necesitamos un umbral para determinar si los hombros están encogidos
-    const encogidoThreshold = 200; // Ajusta este valor según las pruebas
-    
-    if (shoulderY < encogidoThreshold) {
-      if (!exerciseState.Encogimientodehombros) {
-        exerciseState.Encogimientodehombros = true;
-        return true; // Movimiento correcto detectado
-      }
-    } else {
-      exerciseState.Encogimientodehombros = false;
-    }
-  }
-  
-  return false; // Movimiento no detectado
-}
 
-// Implementación básica de detección de "Estiramiento del Cuello"
-function detectEstiramientodelcuello(keypoints) {
-  // Obtenemos las posiciones de la cabeza y el cuello
-  const nose = keypoints.find(k => k.name === 'nose');
-  const leftEye = keypoints.find(k => k.name === 'left_eye');
-  const rightEye = keypoints.find(k => k.name === 'right_eye');
-  
-  if (nose.score > 0.5 && leftEye.score > 0.5 && rightEye.score > 0.5) {
-    // Calculamos la inclinación del cuello
-    const deltaX = rightEye.x - leftEye.x;
-    const deltaY = rightEye.y - leftEye.y;
-    const angle = Math.atan2(deltaY, deltaX) * (180 / Math.PI);
-    
-    // Suponiendo que un estiramiento hacia la izquierda o derecha cambia el ángulo
-    const estiramientoThreshold = 15; // Grados, ajusta según pruebas
-    
-    if (angle > estiramientoThreshold || angle < -estiramientoThreshold) {
-      if (!exerciseState.Estiramientodelcuello) {
-        exerciseState.Estiramientodelcuello = true;
-        return true; // Movimiento correcto detectado
-      }
-    } else {
-      exerciseState.Estiramientodelcuello = false;
-    }
-  }
-  
-  return false; // Movimiento no detectado
-}
 
-// Implementación básica de detección de "Flexión Lateral del Tronco"
-function detectFlexionlateraldeltronco(keypoints) {
-  // Obtenemos las posiciones de la cintura y la mano
-  const leftHip = keypoints.find(k => k.name === 'left_hip');
-  const rightHip = keypoints.find(k => k.name === 'right_hip');
-  const leftWrist = keypoints.find(k => k.name === 'left_wrist');
-  const rightWrist = keypoints.find(k => k.name === 'right_wrist');
-  
-  if ((leftHip.score > 0.5 && leftWrist.score > 0.5) || 
-      (rightHip.score > 0.5 && rightWrist.score > 0.5)) {
-    
-    // Calcular la inclinación del tronco hacia la izquierda o derecha
-    const hip = leftHip.score > rightHip.score ? leftHip : rightHip;
-    const wrist = leftWrist.score > rightWrist.score ? leftWrist : rightWrist;
-    
-    const deltaX = wrist.x - hip.x;
-    const deltaY = wrist.y - hip.y;
-    const angle = Math.atan2(deltaY, deltaX) * (180 / Math.PI);
-    
-    // Suponiendo que una flexión lateral cambia el ángulo significativamente
-    const flexionThreshold = 20; // Grados, ajusta según pruebas
-    
-    if (angle > flexionThreshold || angle < -flexionThreshold) {
-      if (!exerciseState.Flexionlateraldeltronco) {
-        exerciseState.Flexionlateraldeltronco = true;
-        return true; // Movimiento correcto detectado
-      }
-    } else {
-      exerciseState.Flexionlateraldeltronco = false;
-    }
-  }
-  
-  return false; // Movimiento no detectado
-}
-
-// Implementación básica de detección de "Círculos con los Brazos"
-// Nota: La detección de círculos requiere seguimiento del movimiento a lo largo del tiempo.
-// Aquí proporcionamos una lógica muy simplificada que debe ser mejorada.
+// Función para detectar "Círculos con los Brazos"
 let circlesCounter = 0;
 let lastDirectionX = null;
 let lastDirectionY = null;
 
-function detectCirculosconlosbrazos(keypoints) {
-  // Obtener las posiciones de las manos
+function detectCirculosconlosbrazos(keypoints, userParams = {circleThreshold: 4}) {
+  // Buscar las posiciones de las muñecas (puntos clave)
   const leftWrist = keypoints.find(k => k.name === 'left_wrist');
   const rightWrist = keypoints.find(k => k.name === 'right_wrist');
-  
+
+  // Comprobamos si las posiciones de las muñecas tienen una alta precisión
   if (leftWrist.score > 0.5 && rightWrist.score > 0.5) {
-    // Calcular el movimiento promedio de ambas manos
+    // Calculamos las posiciones promedio de ambas muñecas
     const avgWristX = (leftWrist.x + rightWrist.x) / 2;
     const avgWristY = (leftWrist.y + rightWrist.y) / 2;
 
-    // Calcular la dirección en `x` e `y` del movimiento
+    // Calculamos la dirección de movimiento en el eje X y Y
     const directionX = avgWristX > lastDirectionX ? 'right' : 'left';
     const directionY = avgWristY > lastDirectionY ? 'up' : 'down';
 
-    // Verificar si hay un cambio en ambas direcciones (indica un cuarto de círculo)
+    // Verificamos si ha habido un cambio de dirección en ambos ejes (indicando un cuarto de círculo)
     if (lastDirectionX && lastDirectionY) {
       if ((lastDirectionX !== directionX && lastDirectionY !== directionY) || 
           (lastDirectionX === directionX && lastDirectionY !== directionY)) {
-        circlesCounter++;
-        
-        // Completar un círculo cada 4 cambios de dirección (simplificado)
-        if (circlesCounter >= 4) {
-          circlesCounter = 0;
+        circlesCounter++; // Aumentamos el contador de círculos
+
+        // Umbral para completar un círculo (ajustable)
+        const circleThreshold = userParams.circleThreshold || 4;
+
+        if (circlesCounter >= circleThreshold) {
+          circlesCounter = 0; // Reseteamos el contador después de completar un círculo
           return true; // Círculo completo detectado
         }
       }
     }
-    
-    // Guardar la última posición
+    // Guardamos la última posición para detectar cambios de dirección
     lastDirectionX = avgWristX;
     lastDirectionY = avgWristY;
   }
-  
-  return false; // No se detectó un círculo completo
+  return false; // Si no se detecta un círculo completo
 }
-      
-      // Implementación básica de detección de "Elevaciones de Brazos Frontales"
-      function detectElevacionesdebrazosfrontales(keypoints) {
-        const leftShoulder = keypoints.find(k => k.name === 'left_shoulder');
-        const rightShoulder = keypoints.find(k => k.name === 'right_shoulder');
-        const leftWrist = keypoints.find(k => k.name === 'left_wrist');
-        const rightWrist = keypoints.find(k => k.name === 'right_wrist');
-      
-        if (leftShoulder.score > 0.5 && rightShoulder.score > 0.5 && 
-            leftWrist.score > 0.5 && rightWrist.score > 0.5) {
-            
-          const shoulderY = (leftShoulder.y + rightShoulder.y) / 2;
-          const wristY = (leftWrist.y + rightWrist.y) / 2;
-      
-          // Suponiendo que la elevación frontal se detecta si la muñeca está por encima de los hombros
-          if (wristY < shoulderY - 50) { // Ajusta el umbral según sea necesario
-            if (!exerciseState.Elevacionesdebrazosfrontales) {
-              exerciseState.Elevacionesdebrazosfrontales = true;
-              return true; // Movimiento correcto detectado
-            }
-          } else {
-            exerciseState.Elevacionesdebrazosfrontales = false;
-          }
+
+
+// Función para detectar "Elevaciones de Brazos Frontales"
+let frontRaisesCounter = 0;
+let lastDirectionXFront = null;
+let lastDirectionYFront = null;
+
+function detectElevacionesdebrazosfrontales(keypoints, userParams = {frontRaiseThreshold: 30}) {
+  // Buscar las posiciones de las muñecas (puntos clave)
+  const leftWrist = keypoints.find(k => k.name === 'left_wrist');
+  const rightWrist = keypoints.find(k => k.name === 'right_wrist');
+
+  // Comprobamos si las posiciones de las muñecas tienen una alta precisión
+  if (leftWrist.score > 0.5 && rightWrist.score > 0.5) {
+    // Calculamos las posiciones promedio de ambas muñecas
+    const avgWristX = (leftWrist.x + rightWrist.x) / 2;
+    const avgWristY = (leftWrist.y + rightWrist.y) / 2;
+
+    // Calculamos la dirección de movimiento en el eje X y Y
+    const directionX = avgWristX > lastDirectionXFront ? 'right' : 'left';
+    const directionY = avgWristY > lastDirectionYFront ? 'up' : 'down';
+
+    // Verificamos si ha habido un cambio de dirección (indicando que el brazo se elevó)
+    if (lastDirectionXFront && lastDirectionYFront) {
+      if ((lastDirectionXFront !== directionX && lastDirectionYFront !== directionY) || 
+          (lastDirectionXFront === directionX && lastDirectionYFront !== directionY)) {
+        frontRaisesCounter++; // Aumentamos el contador de elevaciones
+
+        // Umbral para completar una elevación (ajustable)
+        const frontRaiseThreshold = userParams.frontRaiseThreshold || 30;
+
+        if (frontRaisesCounter >= frontRaiseThreshold) {
+          frontRaisesCounter = 0; // Reseteamos el contador después de completar una elevación
+          return true; // Elevación completa detectada
         }
-        
-        return false; // Movimiento no detectado
       }
-      
-      // Implementación básica de detección de "Elevaciones de Brazos Laterales"
-      function detectElevacionesdebrazoslaterales(keypoints) {
-        const leftShoulder = keypoints.find(k => k.name === 'left_shoulder');
-        const rightShoulder = keypoints.find(k => k.name === 'right_shoulder');
-        const leftWrist = keypoints.find(k => k.name === 'left_wrist');
-        const rightWrist = keypoints.find(k => k.name === 'right_wrist');
-      
-        if (leftShoulder.score > 0.5 && rightShoulder.score > 0.5 && 
-            leftWrist.score > 0.5 && rightWrist.score > 0.5) {
-            
-          const shoulderY = (leftShoulder.y + rightShoulder.y) / 2;
-          const leftWristY = leftWrist.y;
-          const rightWristY = rightWrist.y;
-      
-          // Detectar si ambos brazos están elevados hacia los lados
-          if (leftWristY < shoulderY - 50 && rightWristY < shoulderY - 50) {
-            if (!exerciseState.Elevacionesdebrazoslaterales) {
-              exerciseState.Elevacionesdebrazoslaterales = true;
-              return true; // Movimiento correcto detectado
-            }
-          } else {
-            exerciseState.Elevacionesdebrazoslaterales = false;
-          }
+    }
+
+    // Guardamos la última posición para detectar cambios de dirección
+    lastDirectionXFront = avgWristX;
+    lastDirectionYFront = avgWristY;
+  }
+  return false; // Si no se detecta una elevación completa
+}
+// Función para detectar "Elevaciones de Brazos Laterales"
+let sideRaisesCounter = 0;
+let lastDirectionXSide = null;
+let lastDirectionYSide = null;
+
+function detectElevacionesdebrazoslaterales(keypoints, userParams = {sideRaiseThreshold: 30}) {
+  // Buscar las posiciones de las muñecas (puntos clave)
+  const leftWrist = keypoints.find(k => k.name === 'left_wrist');
+  const rightWrist = keypoints.find(k => k.name === 'right_wrist');
+
+  // Comprobamos si las posiciones de las muñecas tienen una alta precisión
+  if (leftWrist.score > 0.5 && rightWrist.score > 0.5) {
+    // Calculamos las posiciones promedio de ambas muñecas
+    const avgWristX = (leftWrist.x + rightWrist.x) / 2;
+    const avgWristY = (leftWrist.y + rightWrist.y) / 2;
+
+    // Calculamos la dirección de movimiento en el eje X y Y
+    const directionX = avgWristX > lastDirectionXSide ? 'right' : 'left';
+    const directionY = avgWristY > lastDirectionYSide ? 'up' : 'down';
+
+    // Verificamos si ha habido un cambio de dirección (indicando que el brazo se elevó lateralmente)
+    if (lastDirectionXSide && lastDirectionYSide) {
+      if ((lastDirectionXSide !== directionX && lastDirectionYSide !== directionY) || 
+          (lastDirectionXSide === directionX && lastDirectionYSide !== directionY)) {
+        sideRaisesCounter++; // Aumentamos el contador de elevaciones laterales
+
+        // Umbral para completar una elevación lateral (ajustable)
+        const sideRaiseThreshold = userParams.sideRaiseThreshold || 30;
+
+        if (sideRaisesCounter >= sideRaiseThreshold) {
+          sideRaisesCounter = 0; // Reseteamos el contador después de completar una elevación lateral
+          return true; // Elevación lateral completa detectada
         }
-        
-        return false; // Movimiento no detectado
       }
-      
+    }
+
+    // Guardamos la última posición para detectar cambios de dirección
+    lastDirectionXSide = avgWristX;
+    lastDirectionYSide = avgWristY;
+  }
+  return false; // Si no se detecta una elevación lateral completa
+}
+
+// Función para detectar "Encogimiento de hombros"
+function detectEncogimientodehombros(keypoints, userParams = {hombrosThreshold: 15}) {
+  // Buscar las posiciones de los hombros (puntos clave)
+  const leftShoulder = keypoints.find(k => k.name === 'left_shoulder');
+  const rightShoulder = keypoints.find(k => k.name === 'right_shoulder');
+  
+  // Comprobamos si las posiciones de los hombros tienen una alta precisión
+  if (leftShoulder.score > 0.5 && rightShoulder.score > 0.5) {
+    // Calculamos la diferencia de posiciones entre ambos hombros (en el eje Y)
+    const deltaY = rightShoulder.y - leftShoulder.y;
+    
+    // Umbral para el encogimiento de hombros (ajustable)
+    const hombrosThreshold = userParams.hombrosThreshold || 15;
+    
+    // Verificamos si la diferencia en el eje Y es mayor al umbral, indicando un encogimiento de hombros
+    if (deltaY > hombrosThreshold) {
+      if (!exerciseState.Encogimientodehombros) {
+        exerciseState.Encogimientodehombros = true; // Marcamos el ejercicio como realizado
+        return true; // Movimiento correcto detectado
+      }
+    } else {
+      exerciseState.Encogimientodehombros = false; // Si la diferencia no supera el umbral, no se detecta el movimiento
+    }
+  }
+  return false; // Si no se detecta el movimiento de encogimiento de hombros
+}
+
+// Función para detectar "Estiramiento del Cuello"
+function detectEstiramientodelcuello(keypoints, userParams = {estiramientoThreshold: 15}) {
+  // Buscar las posiciones de la nariz y los ojos (puntos clave)
+  const nose = keypoints.find(k => k.name === 'nose');
+  const leftEye = keypoints.find(k => k.name === 'left_eye');
+  const rightEye = keypoints.find(k => k.name === 'right_eye');
+
+  // Comprobamos si las posiciones de la nariz y los ojos tienen una alta precisión
+  if (nose.score > 0.5 && leftEye.score > 0.5 && rightEye.score > 0.5) {
+    // Calculamos la diferencia de posiciones entre los ojos (en el eje X y Y)
+    const deltaX = rightEye.x - leftEye.x;
+    const deltaY = rightEye.y - leftEye.y;
+    const angle = Math.atan2(deltaY, deltaX) * (180 / Math.PI); // Calculamos el ángulo de inclinación
+
+    // Umbral para el estiramiento del cuello (ajustable)
+    const estiramientoThreshold = userParams.estiramientoThreshold || 15;
+
+    // Verificamos si el ángulo de inclinación es mayor al umbral, indicando un movimiento de estiramiento
+    if (angle > estiramientoThreshold || angle < -estiramientoThreshold) {
+      if (!exerciseState.Estiramientodelcuello) {
+        exerciseState.Estiramientodelcuello = true; // Marcamos el ejercicio como realizado
+        return true; // Movimiento correcto detectado
+      }
+    } else {
+      exerciseState.Estiramientodelcuello = false; // Si el ángulo no supera el umbral, no se detecta el movimiento
+    }
+  }
+  return false; // Si no se detecta el movimiento de estiramiento
+}
+
+// Función para detectar "Flexión Lateral del Tronco"
+function detectFlexionlateraldeltronco(keypoints, userParams = {flexionThreshold: 20}) {
+  // Buscar las posiciones de la cadera y las muñecas (puntos clave)
+  const leftHip = keypoints.find(k => k.name === 'left_hip');
+  const rightHip = keypoints.find(k => k.name === 'right_hip');
+  const leftWrist = keypoints.find(k => k.name === 'left_wrist');
+  const rightWrist = keypoints.find(k => k.name === 'right_wrist');
+
+  // Comprobamos si las posiciones de la cadera y las muñecas tienen una alta precisión
+  if ((leftHip.score > 0.5 && leftWrist.score > 0.5) || 
+      (rightHip.score > 0.5 && rightWrist.score > 0.5)) {
+
+    // Elegimos la cadera con mayor precisión y la muñeca correspondiente
+    const hip = leftHip.score > rightHip.score ? leftHip : rightHip;
+    const wrist = leftWrist.score > rightWrist.score ? leftWrist : rightWrist;
+
+    // Calculamos la diferencia entre las posiciones de la muñeca y la cadera
+    const deltaX = wrist.x - hip.x;
+    const deltaY = wrist.y - hip.y;
+    const angle = Math.atan2(deltaY, deltaX) * (180 / Math.PI); // Calculamos el ángulo de flexión lateral
+
+    // Umbral para la flexión lateral (ajustable)
+    const flexionThreshold = userParams.flexionThreshold || 20;
+
+    // Verificamos si el ángulo de flexión es mayor al umbral, indicando un movimiento de flexión lateral
+    if (angle > flexionThreshold || angle < -flexionThreshold) {
+      if (!exerciseState.Flexionlateraldeltronco) {
+        exerciseState.Flexionlateraldeltronco = true; // Marcamos el ejercicio como realizado
+        return true; // Movimiento correcto detectado
+      }
+    } else {
+      exerciseState.Flexionlateraldeltronco = false; // Si el ángulo no supera el umbral, no se detecta el movimiento
+    }
+  }
+  return false; // Si no se detecta el movimiento de flexión lateral
+}
+
+
       // Inicializar todo
       async function init() {
         await setupCamera();

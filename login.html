@@ -5,8 +5,26 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Login y Registro - Detección de Movimiento y Ejercicios</title>
   <link rel="stylesheet" href="styles.css">
-</head>
+  <style>
+    /* Estilo para la imagen de bienvenida */
+    #welcomeImage {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: url('assets/imagenes/Bienvenida.jpeg') no-repeat center center;
+      background-size: cover;
+      z-index: 9999;
+    }
+  </style>
+</head> 
 <body>
+
+  <!-- Contenedor de la imagen de bienvenida -->
+  <div id="welcomeImage"></div>
+
+
   <h1>Iniciar Sesión o Registrarse</h1>
   
   <!-- Contenedor principal -->
@@ -75,6 +93,14 @@
       localStorage.setItem("selectedUsers", JSON.stringify(selectedUsers));
       alert("Usuarios guardados: " + selectedUsers.join(", "));
     });
+
+     // Mostrar la imagen de bienvenida durante 5 segundos antes de mostrar el login
+     window.onload = function() {
+      setTimeout(function() {
+        document.getElementById('welcomeImage').style.display = 'none';  // Ocultar imagen
+        document.getElementById('loginContainer').style.display = 'block';  // Mostrar el formulario
+      }, 7000);  // 5 segundos
+    }
   </script>
 
   
